@@ -8,7 +8,7 @@ use std::{
 	sync::Arc,
 };
 
-use axum::{Extension, Router, extract::ConnectInfo};
+use axum::{Router, extract::connect_info::MockConnectInfo};
 use axum_server::Handle;
 use futures::FutureExt;
 use tokio::task::JoinSet;
@@ -36,7 +36,7 @@ pub(super) async fn serve(
 
 	let router = router
 		.clone()
-		.layer(Extension(ConnectInfo("0.0.0.0".parse::<SocketAddr>())))
+		.layer(MockConnectInfo(SocketAddr::from(([0, 0, 0, 0], 0))))
 		.into_make_service();
 	let acceptor = axum_server::from_unix(unix_listener)?
 		.handle(handle.clone())
