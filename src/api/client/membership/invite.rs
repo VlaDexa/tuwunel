@@ -1,5 +1,5 @@
 use axum::extract::State;
-use axum_client_ip::InsecureClientIp;
+use axum_client_ip::ClientIp;
 use futures::{FutureExt, join};
 use ruma::{api::client::membership::invite_user, events::room::member::MembershipState};
 use tuwunel_core::{Err, Result};
@@ -13,7 +13,7 @@ use crate::{Ruma, client::utils::invite_check};
 #[tracing::instrument(skip_all, fields(%client), name = "invite")]
 pub(crate) async fn invite_user_route(
 	State(services): State<crate::State>,
-	InsecureClientIp(client): InsecureClientIp,
+	ClientIp(client): ClientIp,
 	body: Ruma<invite_user::v3::Request>,
 ) -> Result<invite_user::v3::Response> {
 	let sender_user = body.sender_user();

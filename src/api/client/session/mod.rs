@@ -8,7 +8,7 @@ mod sso;
 mod token;
 
 use axum::extract::State;
-use axum_client_ip::InsecureClientIp;
+use axum_client_ip::ClientIp;
 use ruma::api::client::session::{
 	get_login_types::{
 		self,
@@ -42,7 +42,7 @@ use crate::Ruma;
 #[tracing::instrument(skip_all, fields(%client), name = "login")]
 pub(crate) async fn get_login_types_route(
 	State(services): State<crate::State>,
-	InsecureClientIp(client): InsecureClientIp,
+	ClientIp(client): ClientIp,
 	_body: Ruma<get_login_types::v3::Request>,
 ) -> Result<get_login_types::v3::Response> {
 	let get_login_token = services.config.login_via_existing_session;
@@ -102,7 +102,7 @@ pub(crate) async fn get_login_types_route(
 #[tracing::instrument(name = "login", skip_all, fields(%client, ?body.login_info))]
 pub(crate) async fn login_route(
 	State(services): State<crate::State>,
-	InsecureClientIp(client): InsecureClientIp,
+	ClientIp(client): ClientIp,
 	body: Ruma<login::v3::Request>,
 ) -> Result<login::v3::Response> {
 	// Validate login method

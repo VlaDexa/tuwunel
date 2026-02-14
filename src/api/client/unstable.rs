@@ -1,5 +1,5 @@
 use axum::extract::State;
-use axum_client_ip::InsecureClientIp;
+use axum_client_ip::ClientIp;
 use futures::StreamExt;
 use ruma::{
 	OwnedRoomId,
@@ -30,7 +30,7 @@ use crate::Ruma;
 #[tracing::instrument(skip_all, fields(%client), name = "mutual_rooms")]
 pub(crate) async fn get_mutual_rooms_route(
 	State(services): State<crate::State>,
-	InsecureClientIp(client): InsecureClientIp,
+	ClientIp(client): ClientIp,
 	body: Ruma<mutual_rooms::unstable::Request>,
 ) -> Result<mutual_rooms::unstable::Response> {
 	let sender_user = body.sender_user();

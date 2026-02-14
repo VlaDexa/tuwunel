@@ -1,7 +1,7 @@
 use std::fmt::Write;
 
 use axum::extract::State;
-use axum_client_ip::InsecureClientIp;
+use axum_client_ip::ClientIp;
 use ruma::{
 	UserId,
 	api::client::{
@@ -34,7 +34,7 @@ const RANDOM_USER_ID_LENGTH: usize = 10;
 #[tracing::instrument(skip_all, fields(%client), name = "register_available")]
 pub(crate) async fn get_register_available_route(
 	State(services): State<crate::State>,
-	InsecureClientIp(client): InsecureClientIp,
+	ClientIp(client): ClientIp,
 	body: Ruma<get_username_availability::v3::Request>,
 ) -> Result<get_username_availability::v3::Response> {
 	// workaround for https://github.com/matrix-org/matrix-appservice-irc/issues/1780 due to inactivity of fixing the issue
@@ -131,7 +131,7 @@ pub(crate) async fn get_register_available_route(
 #[tracing::instrument(skip_all, fields(%client), name = "register")]
 pub(crate) async fn register_route(
 	State(services): State<crate::State>,
-	InsecureClientIp(client): InsecureClientIp,
+	ClientIp(client): ClientIp,
 	body: Ruma<register::v3::Request>,
 ) -> Result<register::v3::Response> {
 	let is_guest = body.kind == RegistrationKind::Guest;
@@ -243,12 +243,13 @@ pub(crate) async fn register_route(
 
 	if body.body.login_type == Some(LoginType::ApplicationService) {
 		match body.appservice_info {
-			| Some(ref info) =>
+			| Some(ref info) => {
 				if !info.is_user_match(&user_id) && !emergency_mode_enabled {
 					return Err!(Request(Exclusive(
 						"Username is not in an appservice namespace."
 					)));
-				},
+				}
+			},
 			| _ => {
 				return Err!(Request(MissingToken("Missing appservice token.")));
 			},

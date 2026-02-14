@@ -36,7 +36,7 @@ pub(super) async fn serve(
 
 	let router = router
 		.clone()
-		.layer(Extension(ConnectInfo("0.0.0.0".parse::<SocketAddr>())))
+		.layer(Extension(ConnectInfo("0.0.0.0".parse::<SocketAddr>().unwrap())))
 		.into_make_service();
 	let acceptor = axum_server::from_unix(unix_listener)?
 		.handle(handle.clone())

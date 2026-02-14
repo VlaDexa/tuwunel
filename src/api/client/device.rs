@@ -1,5 +1,5 @@
 use axum::extract::State;
-use axum_client_ip::InsecureClientIp;
+use axum_client_ip::ClientIp;
 use futures::StreamExt;
 use ruma::{
 	MilliSecondsSinceUnixEpoch,
@@ -49,7 +49,7 @@ pub(crate) async fn get_device_route(
 #[tracing::instrument(skip_all, fields(%client), name = "update_device")]
 pub(crate) async fn update_device_route(
 	State(services): State<crate::State>,
-	InsecureClientIp(client): InsecureClientIp,
+	ClientIp(client): ClientIp,
 	body: Ruma<update_device::v3::Request>,
 ) -> Result<update_device::v3::Response> {
 	let sender_user = body.sender_user();

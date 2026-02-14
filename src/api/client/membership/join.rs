@@ -1,5 +1,5 @@
 use axum::extract::State;
-use axum_client_ip::InsecureClientIp;
+use axum_client_ip::ClientIp;
 use futures::FutureExt;
 use ruma::{
 	RoomId,
@@ -21,7 +21,7 @@ use crate::Ruma;
 #[tracing::instrument(skip_all, fields(%client), name = "join")]
 pub(crate) async fn join_room_by_id_route(
 	State(services): State<crate::State>,
-	InsecureClientIp(client): InsecureClientIp,
+	ClientIp(client): ClientIp,
 	body: Ruma<join_room_by_id::v3::Request>,
 ) -> Result<join_room_by_id::v3::Response> {
 	let sender_user = body.sender_user();
@@ -74,7 +74,7 @@ pub(crate) async fn join_room_by_id_route(
 #[tracing::instrument(skip_all, fields(%client), name = "join")]
 pub(crate) async fn join_room_by_id_or_alias_route(
 	State(services): State<crate::State>,
-	InsecureClientIp(client): InsecureClientIp,
+	ClientIp(client): ClientIp,
 	body: Ruma<join_room_by_id_or_alias::v3::Request>,
 ) -> Result<join_room_by_id_or_alias::v3::Response> {
 	let sender_user = body.sender_user();

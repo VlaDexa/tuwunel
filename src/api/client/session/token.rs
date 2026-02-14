@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use axum::extract::State;
-use axum_client_ip::InsecureClientIp;
+use axum_client_ip::ClientIp;
 use ruma::{
 	OwnedUserId,
 	api::client::session::{
@@ -38,7 +38,7 @@ pub(super) async fn handle_login(
 #[tracing::instrument(skip_all, fields(%client), name = "login_token")]
 pub(crate) async fn login_token_route(
 	State(services): State<crate::State>,
-	InsecureClientIp(client): InsecureClientIp,
+	ClientIp(client): ClientIp,
 	body: Ruma<get_login_token::v1::Request>,
 ) -> Result<get_login_token::v1::Response> {
 	if !services.config.login_via_existing_session || !services.config.login_via_token {

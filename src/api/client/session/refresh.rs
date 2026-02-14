@@ -1,5 +1,5 @@
 use axum::extract::State;
-use axum_client_ip::InsecureClientIp;
+use axum_client_ip::ClientIp;
 use ruma::api::client::session::refresh_token::v3::{Request, Response};
 use tuwunel_core::{Err, Result, debug_info, err};
 use tuwunel_service::users::device::generate_refresh_token;
@@ -14,7 +14,7 @@ use crate::Ruma;
 #[tracing::instrument(skip_all, fields(%client), name = "refresh_token")]
 pub(crate) async fn refresh_token_route(
 	State(services): State<crate::State>,
-	InsecureClientIp(client): InsecureClientIp,
+	ClientIp(client): ClientIp,
 	body: Ruma<Request>,
 ) -> Result<Response> {
 	let refresh_token_claim = body.body.refresh_token;
