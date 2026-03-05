@@ -10,7 +10,10 @@ use ruma::{
 };
 use serde_json::from_str;
 use tuwunel_core::{
-	Err, Event, Result, err, matrix::pdu::PduBuilder, utils::{self, ReadyExt}, warn
+	Err, Event, Result, err,
+	matrix::pdu::PduBuilder,
+	utils::{self, ReadyExt},
+	warn,
 };
 
 use crate::Ruma;
@@ -66,18 +69,15 @@ pub(crate) async fn send_message_event_route(
 			.body
 			.body
 			.deserialize_as_unchecked::<ReactionEventContent>()
-		&& let Ok(reacted_to_pdu) = services
+		&& let Ok(reacted_to_pdu_id) = services
 			.timeline
-			.get_pdu_count(&content.relates_to.event_id)
+			.get_pdu_id(&content.relates_to.event_id)
 			.await
 	{
-		let shortroomid = services
-			.short
-			.get_shortroomid(&body.room_id)
-			.await?;
+		let shortroomid = u64::from_be_bytes(reacted_to_pdu_id.shortroomid());
 		let is_duplicate = services
 			.pdu_metadata
-			.get_relations(shortroomid, reacted_to_pdu, None, ruma::api::Direction::Forward, Some(sender_user))
+			.get_relations(shortroomid, reacted_to_pdu_id.pdu_count(), None, ruma::api::Direction::Forward, Some(sender_user))
 			// Potentially wasteful to deserialuze whole PDU content
 			.ready_filter_map(|(_, pdu)| pdu.get_content::<ReactionEventContent>().ok())
 			.ready_filter(|other_reaction| other_reaction.relates_to.key == content.relates_to.key)
