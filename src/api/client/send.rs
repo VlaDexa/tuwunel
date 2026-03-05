@@ -8,9 +8,10 @@ use ruma::{
 		room::redaction::RoomRedactionEventContent,
 	},
 };
+use futures::StreamExt;
 use serde_json::from_str;
 use tuwunel_core::{
-	Err, Event, Result, err,
+	Err, Event, Result, debug, err,
 	matrix::pdu::PduBuilder,
 	utils::{self, ReadyExt},
 	warn,
@@ -63,33 +64,6 @@ pub(crate) async fn send_message_event_route(
 		return Err!(Request(Forbidden("Redactions are disabled on this server.")));
 	}
 
-	// Forbid duplicate reactions
-	if body.event_type == MessageLikeEventType::Reaction
-		&& let Ok(content) = body
-			.body
-			.body
-			.deserialize_as_unchecked::<ReactionEventContent>()
-		&& let Ok(reacted_to_pdu_id) = services
-			.timeline
-			.get_pdu_id(&content.relates_to.event_id)
-			.await
-	{
-		let shortroomid = u64::from_be_bytes(reacted_to_pdu_id.shortroomid());
-		let is_duplicate = services
-			.pdu_metadata
-			.get_relations(shortroomid, reacted_to_pdu_id.pdu_count(), None, ruma::api::Direction::Forward, Some(sender_user))
-			// Potentially wasteful to deserialuze whole PDU content
-			.ready_filter_map(|(_, pdu)| pdu.get_content::<ReactionEventContent>().ok())
-			.ready_filter(|other_reaction| other_reaction.relates_to.key == content.relates_to.key)
-			// Will return `false` if there are no elements
-			.ready_any(|_| true)
-			.await;
-
-		if is_duplicate {
-			return Err!(Request(DuplicateAnnotation("Duplicate reactions are not allowed.")));
-		}
-	}
-
 	// Forbid m.room.encrypted if encryption is disabled
 	if MessageLikeEventType::RoomEncrypted == body.event_type && !services.config.allow_encryption
 	{
@@ -97,6 +71,76 @@ pub(crate) async fn send_message_event_route(
 	}
 
 	let state_lock = services.state.mutex.lock(&body.room_id).await;
+
+	// Forbid duplicate reactions (must be inside state lock to prevent races)
+	if body.event_type == MessageLikeEventType::Reaction {
+		if let Ok(reaction_content) = body
+			.body
+			.body
+			.deserialize_as_unchecked::<ReactionEventContent>()
+		{
+			debug!(
+				%sender_user,
+				target_event = %reaction_content.relates_to.event_id,
+				key = %reaction_content.relates_to.key,
+				"Checking for duplicate reaction"
+			);
+
+			if let Ok(reacted_to_pdu_id) = services
+				.timeline
+				.get_pdu_id(&reaction_content.relates_to.event_id)
+				.await
+			{
+				let shortroomid = u64::from_be_bytes(reacted_to_pdu_id.shortroomid());
+				let target_count = reacted_to_pdu_id.pdu_count();
+
+				debug!(
+					?shortroomid,
+					?target_count,
+					"Found target event, scanning relations"
+				);
+
+				let relations: Vec<_> = services
+					.pdu_metadata
+					.get_relations(shortroomid, target_count, None, ruma::api::Direction::Forward, None)
+					.collect()
+					.await;
+
+				debug!(
+					relation_count = relations.len(),
+					"Relations found for target event"
+				);
+
+				let is_duplicate = relations.iter().any(|(_, pdu)| {
+					let sender_matches = pdu.sender() == sender_user;
+					let content_result = pdu.get_content::<ReactionEventContent>();
+					let key_matches = content_result
+						.as_ref()
+						.map(|c| c.relates_to.key == reaction_content.relates_to.key)
+						.unwrap_or(false);
+
+					debug!(
+						relation_sender = %pdu.sender(),
+						?sender_matches,
+						content_ok = content_result.is_ok(),
+						?key_matches,
+						"Checking relation"
+					);
+
+					sender_matches && key_matches
+				});
+
+				if is_duplicate {
+					return Err!(Request(DuplicateAnnotation("Duplicate reactions are not allowed.")));
+				}
+			} else {
+				debug!(
+					target_event = %reaction_content.relates_to.event_id,
+					"Target event not found, skipping duplicate check"
+				);
+			}
+		}
+	}
 
 	if body.event_type == MessageLikeEventType::CallInvite
 		&& services
