@@ -11,6 +11,7 @@ use ruma::api::Direction;
 use crate::{Error, Result, err};
 
 #[derive(Hash, PartialEq, Eq, Clone, Copy, Debug)]
+// PDU's sequence number
 pub enum Count {
 	Normal(u64),
 	Backfilled(i64),
